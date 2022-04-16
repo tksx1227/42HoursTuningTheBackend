@@ -92,15 +92,23 @@ const postRecords = async (req, res) => {
       user.user_id,
     ],
   );
+  
+  params = [];
+  putRecordQs = 'insert into record_item_file (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at) values ';
+  body.fileIdList.map((e, i) => {
+    if (i !== 0) {
+      putRecordQs += ',(?, ?, ?, now())';
+    } else {
+      putRecordQs += ' (?, ?, ?, now())';
+    }
+    params.push(newId);
+    params.push(e.fileId);
+    params.push(e.thumbFileId);
+  });
 
-  for (const e of body.fileIdList) {
-    await pool.query(
-      `insert into record_item_file
-        (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at)
-        values (?, ?, ?, now())`,
-      [`${newId}`, `${e.fileId}`, `${e.thumbFileId}`],
-    );
-  }
+  await pool.query(
+    putRecordQs, params
+  );
 
   res.send({ recordId: newId });
 };
