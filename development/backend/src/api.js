@@ -391,98 +391,68 @@ const allActive = async (req, res) => {
     limit = 10;
   }
 
-  const searchRecordQs = `select * from record where status = "open" order by updated_at desc, record_id asc limit ? offset ?`;
+  const searchRecordQs = `
+  SELECT
+    record.record_id,
+    record.created_by,
+    record.application_group,
+    record.created_at,
+    record.updated_at,
+    record.title,
+    group_info.name AS group_name,
+    user.name AS user_name,
+    (
+      SELECT COUNT(*)
+      FROM record_comment
+      WHERE record.record_id = record_comment.linked_record_id
+    ) comment_count,
+    (
+      SELECT item_id
+      FROM record_item_file
+      WHERE record.record_id = record_item_file.linked_record_id
+      ORDER BY record_item_file.item_id ASC
+      LIMIT 1
+    ) thumbnail_id,
+    (
+      SELECT access_time
+      FROM record_last_access
+      WHERE record.record_id = record_last_access.record_id
+        AND user.user_id = record_last_access.user_id
+    ) last_accessed_at
+  FROM record, user, group_info
+  WHERE record.status = "open" 
+    AND record.created_by = user.user_id
+    AND record.application_group = group_info.group_id
+  ORDER BY updated_at DESC, record_id ASC 
+  LIMIT ? 
+  OFFSET ?
+  `;
 
   const [recordResult] = await pool.query(searchRecordQs, [limit, offset]);
   mylog(recordResult);
 
-  const items = Array(recordResult.length);
+  const items = recordResult.map((record) => {
+    return {
+      recordId: record.record_id,
+      title: record.title,
+      applicationGroup: record.application_group,
+      applicationGroupName: record.group_name,
+      createdBy: record.created_by,
+      createdByName: record.user_name,
+      createAt: record.created_at,
+      commentCount: record.comment_count,
+      isUnConfirmed: Date.parse(record.last_accessed_at) < Date.parse(record.updated_at),
+      thumbNailItemId: record.thumbnail_id,
+      updatedAt: record.updated_at,
+    }
+  })
+
+  const recordCountQs = 'SELECT COUNT(*) FROM record WHERE status = "open"';
+
   let count = 0;
-
-  const searchUserQs = 'select * from user where user_id = ?';
-  const searchGroupQs = 'select * from group_info where group_id = ?';
-  const searchThumbQs =
-    'select * from record_item_file where linked_record_id = ? order by item_id asc limit 1';
-  const countQs = 'select count(*) from record_comment where linked_record_id = ?';
-  const searchLastQs = 'select * from record_last_access where user_id = ? and record_id = ?';
-
-  for (let i = 0; i < recordResult.length; i++) {
-    const resObj = {
-      recordId: null,
-      title: '',
-      applicationGroup: null,
-      applicationGroupName: null,
-      createdBy: null,
-      createdByName: null,
-      createAt: '',
-      commentCount: 0,
-      isUnConfirmed: true,
-      thumbNailItemId: null,
-      updatedAt: '',
-    };
-
-    const line = recordResult[i];
-    mylog(line);
-    const recordId = recordResult[i].record_id;
-    const createdBy = line.created_by;
-    const applicationGroup = line.application_group;
-    const updatedAt = line.updated_at;
-    let createdByName = null;
-    let applicationGroupName = null;
-    let thumbNailItemId = null;
-    let commentCount = 0;
-    let isUnConfirmed = true;
-
-    const [userResult] = await pool.query(searchUserQs, [createdBy]);
-    if (userResult.length === 1) {
-      createdByName = userResult[0].name;
-    }
-
-    const [groupResult] = await pool.query(searchGroupQs, [applicationGroup]);
-    if (groupResult.length === 1) {
-      applicationGroupName = groupResult[0].name;
-    }
-
-    const [itemResult] = await pool.query(searchThumbQs, [recordId]);
-    if (itemResult.length === 1) {
-      thumbNailItemId = itemResult[0].item_id;
-    }
-
-    const [countResult] = await pool.query(countQs, [recordId]);
-    if (countResult.length === 1) {
-      commentCount = countResult[0]['count(*)'];
-    }
-
-    const [lastResult] = await pool.query(searchLastQs, [user.user_id, recordId]);
-    if (lastResult.length === 1) {
-      mylog(updatedAt);
-      const updatedAtNum = Date.parse(updatedAt);
-      const accessTimeNum = Date.parse(lastResult[0].access_time);
-      if (updatedAtNum <= accessTimeNum) {
-        isUnConfirmed = false;
-      }
-    }
-
-    resObj.recordId = recordId;
-    resObj.title = line.title;
-    resObj.applicationGroup = applicationGroup;
-    resObj.applicationGroupName = applicationGroupName;
-    resObj.createdBy = createdBy;
-    resObj.createdByName = createdByName;
-    resObj.createAt = line.created_at;
-    resObj.commentCount = commentCount;
-    resObj.isUnConfirmed = isUnConfirmed;
-    resObj.thumbNailItemId = thumbNailItemId;
-    resObj.updatedAt = updatedAt;
-
-    items[i] = resObj;
-  }
-
-  const recordCountQs = 'select count(*) from record where status = "open"';
-
   const [recordCountResult] = await pool.query(recordCountQs);
   if (recordCountResult.length === 1) {
-    count = recordCountResult[0]['count(*)'];
+    count = recordCountResult[0]['COUNT(*)'];
   }
 
   res.send({ count: count, items: items });
