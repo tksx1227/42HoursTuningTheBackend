@@ -547,12 +547,12 @@ const allClosed = async (req, res) => {
   mylog(recordResult);
 
   const items = recordResult.map((record) => {
-    const lastAccesscedAt = record.last_accessed_at;
+    const lastAccessedAt = record.last_accessed_at;
     const updatedAt = record.updated_at;
 
     let isUnConfirmed = true;
-    if (lastAccesscedAt && updatedAt) {
-      isUnConfirmed = Date.parse(lastAaccessedAt) < Date.parse(updatedAt);
+    if (lastAccessedAt && updatedAt) {
+      isUnConfirmed = Date.parse(lastAccessedAt) < Date.parse(updatedAt);
     }
 
     return {
