@@ -432,6 +432,14 @@ const allActive = async (req, res) => {
   mylog(recordResult);
 
   const items = recordResult.map((record) => {
+    const lastAccessedAt = record.last_accessed_at;
+    const updatedAt = record.updated_at;
+
+    let isUnConfirmed = true;
+    if (lastAccessedAt && updatedAt) {
+      isUnConfirmed = Date.parse(lastAccessedAt) < Date.parse(updatedAt);
+    }
+
     return {
       recordId: record.record_id,
       title: record.title,
@@ -441,7 +449,7 @@ const allActive = async (req, res) => {
       createdByName: record.user_name,
       createAt: record.created_at,
       commentCount: record.comment_count,
-      isUnConfirmed: Date.parse(record.last_accessed_at) < Date.parse(record.updated_at),
+      isUnConfirmed: isUnConfirmed,
       thumbNailItemId: record.thumbnail_id,
       updatedAt: record.updated_at,
     }
