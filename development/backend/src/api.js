@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const jimp = require('jimp');
 
 const mysql = require('mysql2/promise');
-
+const now = Date.now();
 
 // MEMO: 設定項目はここを参考にした
 // https://github.com/sidorares/node-mysql2#api-and-configuration
@@ -20,6 +20,8 @@ const mysqlOption = {
 const pool = mysql.createPool(mysqlOption);
 
 const mylog = (obj) => {
+  console.log(Date.now()-now);
+
   if (Array.isArray(obj)) {
     for (const e of obj) {
       console.log(e);
@@ -241,9 +243,10 @@ const tomeActive = async (req, res) => {
     limit = 10;
   }
 
-  const [searchMyGroupQs] = pool.query("select c.category_id, c.application_group \
+  const [targetCategoryAppGroupList] = await pool.query("select c.category_id, c.application_group \
     from category_group c join group_member g \
-    on g.group_id = c.group_id where group_member.user_id = ?", [user.user_id]);
+    on g.group_id = c.group_id where g.user_id = ?", user.user_id);
+  console.log(targetCategoryAppGroupList);
 
   let searchRecordQs =
     'select * from record where status = "open" and (category_id, application_group) in (';
@@ -259,8 +262,8 @@ const tomeActive = async (req, res) => {
       searchRecordQs += ' (?, ?)';
       recordCountQs += ' (?, ?)';
     }
-    param.push(targetCategoryAppGroupList[i].categoryId);
-    param.push(targetCategoryAppGroupList[i].applicationGroup);
+    param.push(targetCategoryAppGroupList[i].category_id);
+    param.push(targetCategoryAppGroupList[i].application_group);
   }
   searchRecordQs += ' ) order by updated_at desc, record_id  limit ? offset ?';
   recordCountQs += ' )';
