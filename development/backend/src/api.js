@@ -5,7 +5,6 @@ const jimp = require('jimp');
 
 const mysql = require('mysql2/promise');
 
-
 // MEMO: 設定項目はここを参考にした
 // https://github.com/sidorares/node-mysql2#api-and-configuration
 // https://github.com/mysqljs/mysql
@@ -97,7 +96,7 @@ const postRecords = async (req, res) => {
       user.user_id,
     ],
   );
-  
+
   params = [];
   putRecordQs = 'insert into record_item_file (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at) values ';
   body.fileIdList.map((e, i) => {
@@ -250,32 +249,9 @@ const tomeActive = async (req, res) => {
     limit = 10;
   }
 
-  const searchMyGroupQs = `select group_id from group_member where user_id = ?`;
-  const [myGroupResult] = await pool.query(searchMyGroupQs, [user.user_id]);
-  mylog(myGroupResult);
-
-  const targetCategoryAppGroupList = [];
-  const searchTargetQs = `
-    select category_id, application_group
-    from category_group
-    where group_id = ?
-  `;
-
-  for (let i = 0; i < myGroupResult.length; i++) {
-    const groupId = myGroupResult[i].group_id;
-    mylog(groupId);
-
-    const [targetResult] = await pool.query(searchTargetQs, [groupId]);
-    for (let j = 0; j < targetResult.length; j++) {
-      const targetLine = targetResult[j];
-      mylog(targetLine);
-
-      targetCategoryAppGroupList.push({
-        categoryId: targetLine.category_id,
-        applicationGroup: targetLine.application_group,
-      });
-    }
-  }
+  const [targetCategoryAppGroupList] = await pool.query("select c.category_id, c.application_group \
+    from category_group c join group_member g \
+    on g.group_id = c.group_id where g.user_id = ?", user.user_id);
 
   let searchRecordQs = `
     select record_id, title, application_group, created_by, created_at, updated_at
@@ -295,8 +271,8 @@ const tomeActive = async (req, res) => {
       searchRecordQs += ' (?, ?)';
       recordCountQs += ' (?, ?)';
     }
-    param.push(targetCategoryAppGroupList[i].categoryId);
-    param.push(targetCategoryAppGroupList[i].applicationGroup);
+    param.push(targetCategoryAppGroupList[i].category_id);
+    param.push(targetCategoryAppGroupList[i].application_group);
   }
   searchRecordQs += ' ) order by updated_at desc, record_id  limit ? offset ?';
   recordCountQs += ' )';
