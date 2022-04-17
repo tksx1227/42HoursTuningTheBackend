@@ -92,23 +92,15 @@ const postRecords = async (req, res) => {
       user.user_id,
     ],
   );
-  
-  params = [];
-  putRecordQs = 'insert into record_item_file (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at) values ';
-  body.fileIdList.map((e, i) => {
-    if (i !== 0) {
-      putRecordQs += ',(?, ?, ?, now())';
-    } else {
-      putRecordQs += ' (?, ?, ?, now())';
-    }
-    params.push(newId);
-    params.push(e.fileId);
-    params.push(e.thumbFileId);
-  });
 
-  await pool.query(
-    putRecordQs, params
-  );
+  for (const e of body.fileIdList) {
+    await pool.query(
+      `insert into record_item_file
+        (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at)
+        values (?, ?, ?, now())`,
+      [`${newId}`, `${e.fileId}`, `${e.thumbFileId}`],
+    );
+  }
 
   res.send({ recordId: newId });
 };
@@ -241,28 +233,9 @@ const tomeActive = async (req, res) => {
     limit = 10;
   }
 
-  const searchMyGroupQs = `select * from group_member where user_id = ?`;
-  const [myGroupResult] = await pool.query(searchMyGroupQs, [user.user_id]);
-  mylog(myGroupResult);
-
-  const targetCategoryAppGroupList = [];
-  const searchTargetQs = `select * from category_group where group_id = ?`;
-
-  for (let i = 0; i < myGroupResult.length; i++) {
-    const groupId = myGroupResult[i].group_id;
-    mylog(groupId);
-
-    const [targetResult] = await pool.query(searchTargetQs, [groupId]);
-    for (let j = 0; j < targetResult.length; j++) {
-      const targetLine = targetResult[j];
-      mylog(targetLine);
-
-      targetCategoryAppGroupList.push({
-        categoryId: targetLine.category_id,
-        applicationGroup: targetLine.application_group,
-      });
-    }
-  }
+  const [searchMyGroupQs] = pool.query("select c.category_id, c.application_group \
+    from category_group c join group_member g \
+    on g.group_id = c.group_id where group_member.user_id = ?", [user.user_id]);
 
   let searchRecordQs =
     'select * from record where status = "open" and (category_id, application_group) in (';
