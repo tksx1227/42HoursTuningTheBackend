@@ -79,28 +79,22 @@ const postRecords = async (req, res) => {
 
   const newId = uuidv4();
 
-  await pool.query(
-    `insert into record
-    (record_id, status, title, detail, category_id, application_group, created_by, created_at, updated_at)
-    values (?, "open", ?, ?, ?, ?, ?, now(), now())`,
-    [
-      `${newId}`,
-      `${body.title}`,
-      `${body.detail}`,
-      body.categoryId,
-      userPrimary.group_id,
-      user.user_id,
-    ],
-  );
+  params = [];
+  putRecordQs = 'insert into record_item_file (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at) values ';
+  body.fileIdList.map((e, i) => {
+    if (i !== 0) {
+      putRecordQs += ',(?, ?, ?, now())';
+    } else {
+      putRecordQs += ' (?, ?, ?, now())';
+    }
+    params.push(newId);
+    params.push(e.fileId);
+    params.push(e.thumbFileId);
+  });
 
-  for (const e of body.fileIdList) {
-    await pool.query(
-      `insert into record_item_file
-        (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at)
-        values (?, ?, ?, now())`,
-      [`${newId}`, `${e.fileId}`, `${e.thumbFileId}`],
-    );
-  }
+  await pool.query(
+    putRecordQs, params
+  );
 
   res.send({ recordId: newId });
 };
