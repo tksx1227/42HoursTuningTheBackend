@@ -4,7 +4,6 @@ const { v4: uuidv4 } = require('uuid');
 const jimp = require('jimp');
 
 const mysql = require('mysql2/promise');
-const now = Date.now();
 
 // MEMO: 設定項目はここを参考にした
 // https://github.com/sidorares/node-mysql2#api-and-configuration
@@ -20,8 +19,6 @@ const mysqlOption = {
 const pool = mysql.createPool(mysqlOption);
 
 const mylog = (obj) => {
-  console.log(Date.now()-now);
-
   if (Array.isArray(obj)) {
     for (const e of obj) {
       console.log(e);
