@@ -111,7 +111,7 @@ app.post('/api/client/files', async (req, res, next) => {
   }
 })
 
-app.get('/api/client/records/:recordId/files/:itemId', async (req, res, next) => {
+app.get('/api/client/records/:recordId/files/:itemId', cache("10 minutes"), async (req, res, next) => {
   try {
     await api.getRecordItemFile(req, res);
   } catch(e) {
@@ -120,7 +120,7 @@ app.get('/api/client/records/:recordId/files/:itemId', async (req, res, next) =>
   }
 })
 
-app.get('/api/client/records/:recordId/files/:itemId/thumbnail', async (req, res, next) => {
+app.get('/api/client/records/:recordId/files/:itemId/thumbnail', cache("10 minutes"), async (req, res, next) => {
   try {
     await api.getRecordItemFileThumbnail(req, res);
   } catch(e) {
