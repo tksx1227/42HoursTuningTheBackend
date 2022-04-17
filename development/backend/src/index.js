@@ -1,4 +1,6 @@
 const express = require('express')
+const apicache = require('apicache')
+const cache = apicache.middleware;
 const app = express();
 
 app.use(express.json({limit: '10mb'}))
@@ -91,7 +93,7 @@ app.post('/api/client/records/:recordId/comments', async (req, res, next) => {
   }
 })
 
-app.get('/api/client/categories', async (req, res, next) => {
+app.get('/api/client/categories', cache("10 minutes"), async (req, res, next) => {
   try {
     await api.getCategories(req, res);
   } catch(e) {
