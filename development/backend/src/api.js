@@ -79,6 +79,20 @@ const postRecords = async (req, res) => {
 
   const newId = uuidv4();
 
+  await pool.query(
+    `insert into record
+    (record_id, status, title, detail, category_id, application_group, created_by, created_at, updated_at)
+    values (?, "open", ?, ?, ?, ?, ?, now(), now())`,
+    [
+      `${newId}`,
+      `${body.title}`,
+      `${body.detail}`,
+      body.categoryId,
+      userPrimary.group_id,
+      user.user_id,
+    ],
+  );
+
   params = [];
   putRecordQs = 'insert into record_item_file (linked_record_id, linked_file_id, linked_thumbnail_file_id, created_at) values ';
   body.fileIdList.map((e, i) => {
